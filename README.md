@@ -1,0 +1,2 @@
+# TinyHex
+Minimalistic hex viewer
