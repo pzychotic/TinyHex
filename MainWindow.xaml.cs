@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.MemoryMappedFiles;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using Microsoft.Win32;
 
 namespace TinyHex
@@ -54,6 +55,47 @@ namespace TinyHex
                 int.TryParse(item.Content.ToString(), out int newSize))
             {
                 LoadRecords(newSize);
+            }
+        }
+
+        private T? FindVisualChild<T>(DependencyObject depObj) where T : DependencyObject
+        {
+            if (depObj is T found) return found;
+
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
+            {
+                var child = VisualTreeHelper.GetChild(depObj, i);
+                var result = FindVisualChild<T>(child);
+                if (result != null) return result;
+            }
+            return null;
+        }
+
+        private void GoToTextBox_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        {
+            if (e.Key == System.Windows.Input.Key.Enter)
+            {
+                string input = GoToTextBox.Text;
+                long offset = 0;
+                bool success = false;
+                
+                if (input.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                {
+                    success = long.TryParse(input.Substring(2), System.Globalization.NumberStyles.HexNumber, null, out offset);
+                }
+                else
+                {
+                    success = long.TryParse(input, out offset);
+                }
+
+                if (success && offset >= 0 && offset < _fileSize)
+                {
+                    int index = (int)(offset / _recordSize);
+                    RecordListView.SelectedIndex = index;
+
+                    var panel = FindVisualChild<VirtualizingPanel>(RecordListView);
+                    panel?.BringIndexIntoViewPublic(index);
+                }
             }
         }
 

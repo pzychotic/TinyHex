@@ -22,6 +22,8 @@
                 <ComboBoxItem Content="32" IsSelected="True" />
                 <ComboBoxItem Content="64" />
             </ComboBox>
+            <TextBlock Text="Go to:" VerticalAlignment="Center" Margin="10,0,5,0" />
+            <TextBox x:Name="GoToTextBox" Width="100" VerticalAlignment="Center" KeyDown="GoToTextBox_KeyDown" />
         </StackPanel>
 
         <ListView x:Name="RecordListView"
