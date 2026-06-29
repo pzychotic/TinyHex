@@ -14,7 +14,6 @@ namespace TinyHex
     public partial class MainWindow : Window, INotifyPropertyChanged
     {
         private MemoryMappedFile? _mmf = null;
-        private MemoryMappedViewAccessor? _accessor = null;
         private string _filePath = "";
         private long _fileSize = 0;
         private int _recordSize = 32;
@@ -39,13 +38,10 @@ namespace TinyHex
 
         private void LoadRecords(int recordSize)
         {
-            if(_accessor==null)
-            {
-                return;
-            }
+            if (_mmf == null) return;
             _recordSize = recordSize;
-            long count = _fileSize / recordSize;
-            Records = new MemoryMappedDataCollection(_accessor, recordSize, count);
+            _records?.Dispose();
+            Records = new MemoryMappedDataCollection(_mmf, _fileSize, recordSize);
             DataContext = this;
         }
 
@@ -110,10 +106,9 @@ namespace TinyHex
             {
                 _filePath = dlg.FileName;
                 _fileSize = new FileInfo(_filePath).Length;
+                _records?.Dispose();
                 _mmf?.Dispose();
                 _mmf = MemoryMappedFile.CreateFromFile(_filePath, FileMode.Open);
-                _accessor?.Dispose();
-                _accessor = _mmf.CreateViewAccessor(0, _fileSize, MemoryMappedFileAccess.Read);
                 LoadRecords(_recordSize > 0 ? _recordSize : 32);
             }
         }

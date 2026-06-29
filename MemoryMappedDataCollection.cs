@@ -1,22 +1,32 @@
-using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.IO.MemoryMappedFiles;
 using System.Text;
 
 namespace TinyHex
 {
-    public class MemoryMappedDataCollection : IList<string>, IList
+    public class MemoryMappedDataCollection : IList<string>, IList, IDisposable
     {
-        private readonly MemoryMappedViewAccessor _accessor;
+        private readonly MemoryMappedFile _mmf;
+        private readonly long _fileSize;
         private readonly int _recordSize;
+        private readonly long _chunkSize;
+        private readonly long _overlap;
         private readonly long _count;
+        private readonly MappedChunk?[] _chunks = new MappedChunk?[3];
 
-        public MemoryMappedDataCollection(MemoryMappedViewAccessor accessor, int recordSize, long count)
+        public MemoryMappedDataCollection(
+            MemoryMappedFile mmf,
+            long fileSize,
+            int recordSize,
+            long chunkSize = 64L * 1024 * 1024,
+            long overlap   = 4L  * 1024 * 1024)
         {
-            _accessor = accessor;
+            _mmf        = mmf;
+            _fileSize   = fileSize;
             _recordSize = recordSize;
-            _count = count;
+            _chunkSize  = chunkSize;
+            _overlap    = overlap;
+            _count      = fileSize / recordSize;
         }
 
         public string this[int index]
@@ -28,17 +38,16 @@ namespace TinyHex
 
                 byte[] buffer = new byte[_recordSize];
                 long fileOffset = (long)index * _recordSize;
-                _accessor.ReadArray(fileOffset, buffer, 0, buffer.Length);
+                var chunk = GetOrLoadChunk(fileOffset);
+                chunk.Accessor.ReadArray(fileOffset - chunk.StartOffset, buffer, 0, buffer.Length);
 
                 // format line: offset: hex dump | ascii
                 var hex = BitConverter.ToString(buffer).Replace("-", " ");
                 var ascii = new StringBuilder();
                 foreach (byte b in buffer)
-                {
                     ascii.Append(b >= 32 && b <= 126 ? (char)b : '.');
-                }
 
-                int pad = _recordSize * 3; // each byte " FF" (3 chars)
+                int pad = _recordSize * 3;
                 return $"{fileOffset:X8}:{hex.PadLeft(pad)} | {ascii}";
             }
             set => throw new NotSupportedException();
@@ -46,6 +55,59 @@ namespace TinyHex
 
         public int Count => (int)Math.Min(_count, int.MaxValue);
         public bool IsReadOnly => true;
+
+        private MappedChunk GetOrLoadChunk(long byteOffset)
+        {
+            foreach (var c in _chunks)
+                if (c != null && c.Contains(byteOffset)) return c;
+
+            long ci    = byteOffset / _chunkSize;
+            long start = Math.Max(0, ci * _chunkSize - _overlap);
+            long end   = Math.Min(_fileSize, (ci + 1) * _chunkSize + _overlap);
+
+            int slot = FindEvictSlot(ci);
+            _chunks[slot]?.Dispose();
+
+            var chunk = new MappedChunk
+            {
+                ChunkIndex  = ci,
+                StartOffset = start,
+                EndOffset   = end,
+                Accessor    = _mmf.CreateViewAccessor(start, end - start, MemoryMappedFileAccess.Read)
+            };
+            _chunks[slot] = chunk;
+            return chunk;
+        }
+
+        private int FindEvictSlot(long targetChunkIndex)
+        {
+            for (int i = 0; i < _chunks.Length; i++)
+                if (_chunks[i] == null) return i;
+
+            int worst = 0;
+            long maxDist = 0;
+            for (int i = 0; i < _chunks.Length; i++)
+            {
+                long dist = Math.Abs(_chunks[i]!.ChunkIndex - targetChunkIndex);
+                if (dist > maxDist) { maxDist = dist; worst = i; }
+            }
+            return worst;
+        }
+
+        public void Dispose()
+        {
+            foreach (var c in _chunks) c?.Dispose();
+        }
+
+        private sealed class MappedChunk : IDisposable
+        {
+            public long ChunkIndex;
+            public long StartOffset;
+            public long EndOffset;
+            public MemoryMappedViewAccessor Accessor = null!;
+            public bool Contains(long offset) => offset >= StartOffset && offset < EndOffset;
+            public void Dispose() => Accessor?.Dispose();
+        }
 
         public void Add(string item) => throw new NotSupportedException();
         public void Clear() => throw new NotSupportedException();
