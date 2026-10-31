@@ -15,6 +15,12 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
     [ObservableProperty]
     private MemoryMappedDataCollection? _records;
 
+    public string WindowTitle => Filename.Length > 0 ? $"TinyHex - {Filename}" : "TinyHex";
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(WindowTitle))]
+    private string _filename = string.Empty;
+
     public IReadOnlyList<int> BytesPerLineOptions { get; } = [8, 16, 32, 64];
 
     [ObservableProperty]
@@ -69,6 +75,7 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
         _mmf = mmf;
         _fileSize = fileSize;
         LoadRecords();
+        Filename = Path.GetFileName(filePath);
     }
 
     /// <summary>

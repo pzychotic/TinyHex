@@ -38,6 +38,8 @@ public class MainViewModelTests
         Assert.That(_vm.BytesPerLine, Is.EqualTo(32));
         Assert.That(_vm.Records, Is.Null);
         Assert.That(_vm.SelectedIndex, Is.EqualTo(-1));
+        Assert.That(_vm.Filename, Is.Empty);
+        Assert.That(_vm.WindowTitle, Is.EqualTo("TinyHex"));
     }
 
     [Test]
@@ -47,6 +49,20 @@ public class MainViewModelTests
         _vm.OpenFileCommand.Execute(null);
 
         Assert.That(_vm.Records, Is.Null);
+        Assert.That(_vm.WindowTitle, Is.EqualTo("TinyHex"));
+    }
+
+    [Test]
+    public void OpenFile_ShowsFilenameInWindowTitle()
+    {
+        var changed = new List<string?>();
+        _vm.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        OpenTestFile();
+
+        Assert.That(_vm.Filename, Is.EqualTo(Path.GetFileName(_file.Path)));
+        Assert.That(_vm.WindowTitle, Is.EqualTo($"TinyHex - {Path.GetFileName(_file.Path)}"));
+        Assert.That(changed, Does.Contain(nameof(MainViewModel.WindowTitle)));
     }
 
     [Test]

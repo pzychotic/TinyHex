@@ -1,4 +1,4 @@
-﻿<Window x:Class="TinyHex.MainWindow"
+<Window x:Class="TinyHex.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -8,7 +8,7 @@
         xmlns:vm="clr-namespace:TinyHex.ViewModels"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
-        Title="TinyHex" Height="600" Width="1200">
+        Title="{Binding WindowTitle, FallbackValue='TinyHex'}" Height="600" Width="1200">
 
     <!-- Keyboard shortcuts -->
     <Window.InputBindings>
