@@ -1,3 +1,4 @@
 <Solution>
-  <Project Path="TinyHex.csproj" />
+  <Project Path="Source/TinyHex/TinyHex.csproj" />
+  <Project Path="Tests/TinyHex.Tests/TinyHex.Tests.csproj" />
 </Solution>
