@@ -47,7 +47,14 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
     /// </summary>
     public ScrollRequestNotifier ScrollRequest { get; } = new();
 
-    partial void OnBytesPerLineChanged(int value) => LoadRecords();
+    partial void OnBytesPerLineChanged(int oldValue, int newValue)
+    {
+        // keep the selection on the same file offset in the new layout
+        long selectedOffset = SelectedIndex >= 0 ? (long)SelectedIndex * oldValue : -1;
+        LoadRecords();
+        if (selectedOffset >= 0 && Records != null && selectedOffset / newValue < Records.Count)
+            SelectAndScrollTo((int)(selectedOffset / newValue));
+    }
 
     [RelayCommand]
     private void OpenFile()
@@ -85,6 +92,8 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
         _mmf = mmf;
         _fileSize = fileSize;
         LoadRecords();
+        // the list keeps its scroll position when the records are replaced, so start a new file at the top
+        ScrollRequest.Request(0);
         Filename = Path.GetFileName(filePath);
     }
 
@@ -117,7 +126,11 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
         if (!FileOffsetParser.TryParse(GoToText, out long offset) || offset < 0 || offset >= _fileSize)
             return;
 
-        int index = (int)(offset / BytesPerLine);
+        SelectAndScrollTo((int)(offset / BytesPerLine));
+    }
+
+    private void SelectAndScrollTo(int index)
+    {
         SelectedIndex = index;
         ScrollRequest.Request(index);
     }
@@ -127,6 +140,9 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
         if (_mmf == null)
             return;
 
+        // Clear the selection before swapping the collection: otherwise the ListView searches the whole
+        // new collection for the old selected row, reading and formatting every line of the file.
+        SelectedIndex = -1;
         Records?.Dispose();
         Records = new MemoryMappedDataCollection(_mmf, _fileSize, BytesPerLine);
     }
