@@ -60,6 +60,24 @@ public class MainViewModelTests
     }
 
     [Test]
+    public void Drop_LoadsFirstFile()
+    {
+        _vm.DropCommand.Execute(new[] { _file.Path, "ignored.bin" });
+
+        Assert.That(_vm.Records, Is.Not.Null);
+        Assert.That(_vm.Records!.Count, Is.EqualTo(256 / 32));
+    }
+
+    [Test]
+    public void Drop_NoFiles_LeavesRecordsEmpty()
+    {
+        _vm.DropCommand.Execute(Array.Empty<string>());
+        _vm.DropCommand.Execute(null);
+
+        Assert.That(_vm.Records, Is.Null);
+    }
+
+    [Test]
     public void ChangingBytesPerLine_ReloadsRecords()
     {
         OpenTestFile();
