@@ -1,0 +1,50 @@
+﻿<Window x:Class="TinyHex.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:behaviors="clr-namespace:TinyHex.Behaviors"
+        xmlns:vm="clr-namespace:TinyHex.ViewModels"
+        mc:Ignorable="d"
+        d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
+        Title="TinyHex" Height="600" Width="1200">
+    <DockPanel>
+        <Menu DockPanel.Dock="Top" HorizontalAlignment="Stretch">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Open..." Command="{Binding OpenFileCommand}">
+                    <MenuItem.Icon>
+                        <Image Source="/Resources/OpenFile.png" />
+                    </MenuItem.Icon>
+                </MenuItem>
+            </MenuItem>
+        </Menu>
+
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="5">
+            <TextBlock Text="Bytes per line:" VerticalAlignment="Center" Margin="0,0,5,0" />
+            <ComboBox Width="80"
+                      ItemsSource="{Binding BytesPerLineOptions}"
+                      SelectedItem="{Binding BytesPerLine}" />
+            <TextBlock Text="Go to:" VerticalAlignment="Center" Margin="10,0,5,0" />
+            <TextBox Width="100" VerticalAlignment="Center"
+                     Text="{Binding GoToText, UpdateSourceTrigger=PropertyChanged}">
+                <TextBox.InputBindings>
+                    <KeyBinding Key="Enter" Command="{Binding GoToCommand}" />
+                </TextBox.InputBindings>
+            </TextBox>
+        </StackPanel>
+
+        <ListView ItemsSource="{Binding Records}"
+                  SelectedIndex="{Binding SelectedIndex}"
+                  VirtualizingStackPanel.IsVirtualizing="True"
+                  VirtualizingStackPanel.VirtualizationMode="Recycling"
+                  ScrollViewer.IsDeferredScrollingEnabled="False"
+                  ScrollViewer.CanContentScroll="True"
+                  FontFamily="Consolas"
+                  FontSize="14">
+            <b:Interaction.Behaviors>
+                <behaviors:ScrollIntoViewBehavior Notifier="{Binding ScrollRequest}" />
+            </b:Interaction.Behaviors>
+        </ListView>
+    </DockPanel>
+</Window>
