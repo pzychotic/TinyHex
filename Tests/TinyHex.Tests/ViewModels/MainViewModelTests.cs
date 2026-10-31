@@ -93,6 +93,26 @@ public class MainViewModelTests
         Assert.That(_vm.Records, Is.Null);
     }
 
+    [TestCase(8)]
+    [TestCase(64)]
+    public void RestoreBytesPerLine_ValidOption_IsApplied(int value)
+    {
+        _vm.RestoreBytesPerLine(value);
+
+        Assert.That(_vm.BytesPerLine, Is.EqualTo(value));
+    }
+
+    [TestCase(null)]
+    [TestCase(0)]
+    [TestCase(12)]
+    [TestCase(-16)]
+    public void RestoreBytesPerLine_MissingOrInvalid_KeepsDefault(int? value)
+    {
+        _vm.RestoreBytesPerLine(value);
+
+        Assert.That(_vm.BytesPerLine, Is.EqualTo(32));
+    }
+
     [Test]
     public void Drop_MissingFile_ShowsErrorAndLeavesRecordsEmpty()
     {

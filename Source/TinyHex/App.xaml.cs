@@ -1,5 +1,7 @@
 using System.Globalization;
 using System.Windows;
+using TinyHex.Models;
+using TinyHex.Services;
 
 namespace TinyHex;
 
@@ -22,7 +24,11 @@ public partial class App : Application
 
         base.OnStartup(e);
 
-        var window = new MainWindow();
+        // composition root: construct services and inject them into the main window
+        var settingsService = new JsonSettingsService();
+        var settings = settingsService.Load() ?? new AppSettings();
+
+        var window = new MainWindow(settingsService, settings);
         window.Show();
     }
 }

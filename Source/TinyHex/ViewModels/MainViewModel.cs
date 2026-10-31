@@ -26,6 +26,16 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
     [ObservableProperty]
     private int _bytesPerLine = 32;
 
+    /// <summary>
+    /// Restores the bytes per line (e.g. from saved user settings); values not offered in
+    /// <see cref="BytesPerLineOptions"/> are ignored.
+    /// </summary>
+    public void RestoreBytesPerLine(int? value)
+    {
+        if (value is int bytesPerLine && BytesPerLineOptions.Contains(bytesPerLine))
+            BytesPerLine = bytesPerLine;
+    }
+
     [ObservableProperty]
     private string _goToText = string.Empty;
 
