@@ -192,6 +192,76 @@ public class MainViewModelTests
     }
 
     [Test]
+    public void ChangingBytesPerLine_ClearsSelectionBeforeReplacingRecords()
+    {
+        OpenTestFile();
+        _vm.SelectedIndex = 7;
+        int? selectedWhenReplaced = null;
+        _vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainViewModel.Records))
+                selectedWhenReplaced = _vm.SelectedIndex;
+        };
+
+        _vm.BytesPerLine = 8;
+
+        Assert.That(selectedWhenReplaced, Is.EqualTo(-1));
+    }
+
+    [TestCase(32, 8, 7, 28)]
+    [TestCase(8, 32, 31, 7)]
+    [TestCase(8, 32, 5, 1)]
+    public void ChangingBytesPerLine_KeepsSelectionOnSameOffset(int from, int to, int selected, int expectedIndex)
+    {
+        _vm.BytesPerLine = from;
+        OpenTestFile();
+        _vm.SelectedIndex = selected;
+        int? scrolledTo = null;
+        _vm.ScrollRequest.ScrollRequested += index => scrolledTo = index;
+
+        _vm.BytesPerLine = to;
+
+        Assert.That(_vm.SelectedIndex, Is.EqualTo(expectedIndex));
+        Assert.That(scrolledTo, Is.EqualTo(expectedIndex));
+    }
+
+    [Test]
+    public void ChangingBytesPerLine_SelectedOffsetBeyondLastFullLine_ClearsSelection()
+    {
+        _file.Dispose();
+        _file = TempFile.WithSequentialBytes(40);
+        _vm.BytesPerLine = 8;
+        OpenTestFile();
+        _vm.SelectedIndex = 4; // offset 32, not part of any full 32-byte line
+
+        _vm.BytesPerLine = 32;
+
+        Assert.That(_vm.SelectedIndex, Is.EqualTo(-1));
+    }
+
+    [Test]
+    public void OpenFile_ScrollsToStart()
+    {
+        int? scrolledTo = null;
+        _vm.ScrollRequest.ScrollRequested += index => scrolledTo = index;
+
+        OpenTestFile();
+
+        Assert.That(scrolledTo, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void OpenFile_ClearsSelection()
+    {
+        OpenTestFile();
+        _vm.SelectedIndex = 3;
+
+        OpenTestFile();
+
+        Assert.That(_vm.SelectedIndex, Is.EqualTo(-1));
+    }
+
+    [Test]
     public void ChangingBytesPerLine_BeforeOpen_IsUsedWhenOpening()
     {
         _vm.BytesPerLine = 16;
