@@ -51,11 +51,47 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
 
     private void LoadFile(string filePath)
     {
-        _fileSize = new FileInfo(filePath).Length;
+        MemoryMappedFile mmf;
+        long fileSize;
+        try
+        {
+            (mmf, fileSize) = OpenReadOnly(filePath);
+        }
+        catch (Exception ex)
+        {
+            dialogService.ShowError("Error", $"Could not open file:\n{ex.Message}");
+            return;
+        }
+
+        // only replace the current file once the new one is open, so a failed open keeps it visible
         Records?.Dispose();
         _mmf?.Dispose();
-        _mmf = MemoryMappedFile.CreateFromFile(filePath, FileMode.Open);
+        _mmf = mmf;
+        _fileSize = fileSize;
         LoadRecords();
+    }
+
+    /// <summary>
+    /// Maps the file read-only, so read-only files and files other processes have open for writing can be viewed.
+    /// </summary>
+    private static (MemoryMappedFile Mmf, long FileSize) OpenReadOnly(string filePath)
+    {
+        var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        try
+        {
+            // an empty file cannot be memory mapped
+            if (stream.Length == 0)
+                throw new IOException("The file is empty.");
+
+            var mmf = MemoryMappedFile.CreateFromFile(
+                stream, null, 0, MemoryMappedFileAccess.Read, HandleInheritability.None, leaveOpen: false);
+            return (mmf, stream.Length);
+        }
+        catch
+        {
+            stream.Dispose();
+            throw;
+        }
     }
 
     [RelayCommand]

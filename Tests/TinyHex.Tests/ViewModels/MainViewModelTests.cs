@@ -78,6 +78,72 @@ public class MainViewModelTests
     }
 
     [Test]
+    public void Drop_MissingFile_ShowsErrorAndLeavesRecordsEmpty()
+    {
+        _vm.DropCommand.Execute(new[] { Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N")) });
+
+        Assert.That(_vm.Records, Is.Null);
+        Assert.That(_dialogService.Errors, Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public void Drop_EmptyFile_ShowsError()
+    {
+        using var empty = new TempFile([]);
+
+        _vm.DropCommand.Execute(new[] { empty.Path });
+
+        Assert.That(_vm.Records, Is.Null);
+        Assert.That(_dialogService.Errors, Has.Count.EqualTo(1));
+        Assert.That(_dialogService.Errors[0], Does.Contain("empty"));
+    }
+
+    [Test]
+    public void Drop_LockedFile_ShowsErrorAndKeepsCurrentFile()
+    {
+        OpenTestFile();
+        var before = _vm.Records;
+        using var locked = TempFile.WithSequentialBytes(16);
+        using var lockStream = new FileStream(locked.Path, FileMode.Open, FileAccess.Read, FileShare.None);
+
+        _vm.DropCommand.Execute(new[] { locked.Path });
+
+        Assert.That(_dialogService.Errors, Has.Count.EqualTo(1));
+        Assert.That(_vm.Records, Is.SameAs(before));
+        Assert.That(_vm.Records![1], Does.StartWith("00000020: 20 21"));
+    }
+
+    [Test]
+    public void OpenFile_ReadOnlyFile_LoadsRecords()
+    {
+        File.SetAttributes(_file.Path, FileAttributes.ReadOnly);
+        try
+        {
+            OpenTestFile();
+
+            Assert.That(_dialogService.Errors, Is.Empty);
+            Assert.That(_vm.Records!.Count, Is.EqualTo(256 / 32));
+        }
+        finally
+        {
+            // release the mapping before clearing the attribute, so TearDown can delete the file
+            _vm.Dispose();
+            File.SetAttributes(_file.Path, FileAttributes.Normal);
+        }
+    }
+
+    [Test]
+    public void OpenFile_FileOpenForWritingElsewhere_LoadsRecords()
+    {
+        using var writer = new FileStream(_file.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+
+        OpenTestFile();
+
+        Assert.That(_dialogService.Errors, Is.Empty);
+        Assert.That(_vm.Records!.Count, Is.EqualTo(256 / 32));
+    }
+
+    [Test]
     public void ChangingBytesPerLine_ReloadsRecords()
     {
         OpenTestFile();
