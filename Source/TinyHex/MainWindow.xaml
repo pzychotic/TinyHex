@@ -9,10 +9,17 @@
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
         Title="TinyHex" Height="600" Width="1200">
+
+    <!-- Keyboard shortcuts -->
+    <Window.InputBindings>
+        <!-- Ctrl + 'O' for Open -->
+        <KeyBinding Command="{Binding OpenFileCommand}" Key="O" Modifiers="Control" />
+    </Window.InputBindings>
+
     <DockPanel>
         <Menu DockPanel.Dock="Top" HorizontalAlignment="Stretch">
             <MenuItem Header="_File">
-                <MenuItem Header="_Open..." Command="{Binding OpenFileCommand}">
+                <MenuItem Header="_Open" Command="{Binding OpenFileCommand}" InputGestureText="Ctrl+O">
                     <MenuItem.Icon>
                         <Image Source="/Resources/OpenFile.png" />
                     </MenuItem.Icon>
@@ -20,19 +27,28 @@
             </MenuItem>
         </Menu>
 
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="5">
-            <TextBlock Text="Bytes per line:" VerticalAlignment="Center" Margin="0,0,5,0" />
+        <ToolBar DockPanel.Dock="Top" Height="32">
+            <Button Command="{Binding OpenFileCommand}" ToolTip="Open File (Ctrl+O)"
+                    AutomationProperties.Name="Open File">
+                <Image Source="/Resources/OpenFile.png" />
+            </Button>
+            <Separator />
+            <TextBlock Text="Bytes per line:" VerticalAlignment="Center" Margin="4,0" />
             <ComboBox Width="80"
                       ItemsSource="{Binding BytesPerLineOptions}"
-                      SelectedItem="{Binding BytesPerLine}" />
-            <TextBlock Text="Go to:" VerticalAlignment="Center" Margin="10,0,5,0" />
-            <TextBox Width="100" VerticalAlignment="Center"
-                     Text="{Binding GoToText, UpdateSourceTrigger=PropertyChanged}">
+                      SelectedItem="{Binding BytesPerLine}"
+                      AutomationProperties.Name="Bytes per Line" />
+            <Separator />
+            <TextBlock Text="Go to:" VerticalAlignment="Center" Margin="4,0" />
+            <TextBox Width="100" VerticalContentAlignment="Center"
+                     Text="{Binding GoToText, UpdateSourceTrigger=PropertyChanged}"
+                     ToolTip="File offset, decimal or hex with 0x prefix (commit with Enter)"
+                     AutomationProperties.Name="Go to Offset">
                 <TextBox.InputBindings>
                     <KeyBinding Key="Enter" Command="{Binding GoToCommand}" />
                 </TextBox.InputBindings>
             </TextBox>
-        </StackPanel>
+        </ToolBar>
 
         <ListView ItemsSource="{Binding Records}"
                   SelectedIndex="{Binding SelectedIndex}"
@@ -43,6 +59,7 @@
                   FontFamily="Consolas"
                   FontSize="14">
             <b:Interaction.Behaviors>
+                <behaviors:DropBehavior Command="{Binding DropCommand}" />
                 <behaviors:ScrollIntoViewBehavior Notifier="{Binding ScrollRequest}" />
             </b:Interaction.Behaviors>
         </ListView>

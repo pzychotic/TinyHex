@@ -37,9 +37,20 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
     private void OpenFile()
     {
         var filePath = dialogService.ShowOpenFileDialog("Open Binary File", "All Files|*.*");
-        if (filePath == null)
-            return;
+        if (filePath != null)
+            LoadFile(filePath);
+    }
 
+    [RelayCommand]
+    private void Drop(string[]? files)
+    {
+        // only support one file right now
+        if (files?.Length > 0)
+            LoadFile(files[0]);
+    }
+
+    private void LoadFile(string filePath)
+    {
         _fileSize = new FileInfo(filePath).Length;
         Records?.Dispose();
         _mmf?.Dispose();
