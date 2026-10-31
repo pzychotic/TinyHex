@@ -5,13 +5,15 @@
 
 A very fast hex viewer for big files.
 
-Sample code for using ```MemoryMappedFile```s together with ```ListView```s ```VirtualizingStackPanel.IsVirtualizing="True"``` for blazing fast file access and display.
+It uses ```MemoryMappedFile```s together with a virtualizing ```ListView``` (```VirtualizingStackPanel.IsVirtualizing="True"```) for blazing fast file access and display.
 
 ## Features
 
 - Read-only hex and ASCII view of files of any size, mapped into memory in chunks
+- Open files via the toolbar button, `Ctrl+O` or drag-and-drop
 - Adjustable bytes per line: 8, 16, 32 or 64
 - Go to a file offset, entered as decimal or hex (`0x` prefix)
+- Remembers window placement and bytes per line between runs
 
 ## Build
 ### From the command line
