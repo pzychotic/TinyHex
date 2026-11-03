@@ -72,7 +72,7 @@ public class MainViewModelTests
 
         Assert.That(_vm.Records, Is.Not.Null);
         Assert.That(_vm.Records!.Count, Is.EqualTo(256 / 32));
-        Assert.That(_vm.Records[1], Does.StartWith("00000020: 20 21"));
+        Assert.That(_vm.Records[1].ToString(), Does.StartWith("00000020: 20 21"));
     }
 
     [Test]
@@ -146,7 +146,7 @@ public class MainViewModelTests
 
         Assert.That(_dialogService.Errors, Has.Count.EqualTo(1));
         Assert.That(_vm.Records, Is.SameAs(before));
-        Assert.That(_vm.Records![1], Does.StartWith("00000020: 20 21"));
+        Assert.That(_vm.Records![1].ToString(), Does.StartWith("00000020: 20 21"));
     }
 
     [Test]
@@ -226,17 +226,18 @@ public class MainViewModelTests
     }
 
     [Test]
-    public void ChangingBytesPerLine_SelectedOffsetBeyondLastFullLine_ClearsSelection()
+    public void ChangingBytesPerLine_SelectedOffsetInPartialLastLine_SelectsThatLine()
     {
         _file.Dispose();
         _file = TempFile.WithSequentialBytes(40);
         _vm.BytesPerLine = 8;
         OpenTestFile();
-        _vm.SelectedIndex = 4; // offset 32, not part of any full 32-byte line
+        _vm.SelectedIndex = 4; // offset 32, in the short last line of a 32-byte layout
 
         _vm.BytesPerLine = 32;
 
-        Assert.That(_vm.SelectedIndex, Is.EqualTo(-1));
+        Assert.That(_vm.Records!.Count, Is.EqualTo(2));
+        Assert.That(_vm.SelectedIndex, Is.EqualTo(1));
     }
 
     [Test]

@@ -7,10 +7,22 @@ using TinyHex.Services;
 
 namespace TinyHex.ViewModels;
 
-public partial class MainViewModel(IDialogService dialogService) : ObservableObject, IDisposable
+public partial class MainViewModel : ObservableObject, IDisposable
 {
+    private readonly IDialogService _dialogService;
     private MemoryMappedFile? _mmf;
     private long _fileSize;
+
+    /// <param name="dialogService">Shows the open file dialog and errors.</param>
+    /// <param name="searchService">Searches the file for the find bar; searches through a file stream by default.</param>
+    public MainViewModel(IDialogService dialogService, IFileSearchService? searchService = null)
+    {
+        _dialogService = dialogService;
+        Search = new SearchViewModel(searchService ?? new FileSearchService(), SelectedOffset, GoToOffset);
+    }
+
+    /// <summary>The find bar.</summary>
+    public SearchViewModel Search { get; }
 
     [ObservableProperty]
     private MemoryMappedDataCollection? _records;
@@ -52,6 +64,9 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
         // keep the selection on the same file offset in the new layout
         long selectedOffset = SelectedIndex >= 0 ? (long)SelectedIndex * oldValue : -1;
         LoadRecords();
+        // the current search hit, if any, is what the selection is on
+        if (Search.CurrentHitOffset is long hitOffset)
+            selectedOffset = hitOffset;
         if (selectedOffset >= 0 && Records != null && selectedOffset / newValue < Records.Count)
             SelectAndScrollTo((int)(selectedOffset / newValue));
     }
@@ -59,7 +74,7 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
     [RelayCommand]
     private void OpenFile()
     {
-        var filePath = dialogService.ShowOpenFileDialog("Open Binary File", "All Files|*.*");
+        var filePath = _dialogService.ShowOpenFileDialog("Open Binary File", "All Files|*.*");
         if (filePath != null)
             LoadFile(filePath);
     }
@@ -82,7 +97,7 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
         }
         catch (Exception ex)
         {
-            dialogService.ShowError("Error", $"Could not open file:\n{ex.Message}");
+            _dialogService.ShowError("Error", $"Could not open file:\n{ex.Message}");
             return;
         }
 
@@ -95,6 +110,8 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
         // the list keeps its scroll position when the records are replaced, so start a new file at the top
         ScrollRequest.Request(0);
         Filename = Path.GetFileName(filePath);
+        // search the new file with the open find bar's query
+        Search.SetFile(filePath, fileSize);
     }
 
     /// <summary>
@@ -129,6 +146,11 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
         SelectAndScrollTo((int)(offset / BytesPerLine));
     }
 
+    /// <summary>The file offset of the selected row, or 0 without a selection.</summary>
+    private long SelectedOffset() => SelectedIndex >= 0 ? (long)SelectedIndex * BytesPerLine : 0;
+
+    private void GoToOffset(long offset) => SelectAndScrollTo((int)(offset / BytesPerLine));
+
     private void SelectAndScrollTo(int index)
     {
         SelectedIndex = index;
@@ -149,6 +171,7 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
 
     public void Dispose()
     {
+        Search.Dispose();
         Records?.Dispose();
         _mmf?.Dispose();
         GC.SuppressFinalize(this);

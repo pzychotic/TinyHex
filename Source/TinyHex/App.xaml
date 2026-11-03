@@ -1,4 +1,12 @@
 ﻿<Application x:Class="TinyHex.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Application.Resources>
+        <!-- Search hits: orange; the current hit stronger, with dark text. -->
+        <SolidColorBrush x:Key="SearchMatchBrush" Color="#FFFFD8B0" />
+        <SolidColorBrush x:Key="SearchCurrentBrush" Color="#FFFF9632" />
+        <SolidColorBrush x:Key="SearchCurrentTextBrush" Color="#FF000000" />
+        <!-- Border of the find box when nothing is found. -->
+        <SolidColorBrush x:Key="ErrorBrush" Color="#FFFF0000" />
+    </Application.Resources>
 </Application>

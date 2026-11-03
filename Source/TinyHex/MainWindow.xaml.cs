@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Input;
+using System.Windows.Threading;
 using TinyHex.Models;
 using TinyHex.Services;
 using TinyHex.ViewModels;
@@ -44,6 +46,17 @@ public partial class MainWindow : Window
     {
         _viewModel.Dispose();
         base.OnClosed(e);
+    }
+
+    private void Find_Executed(object sender, ExecutedRoutedEventArgs e)
+    {
+        _viewModel.Search.IsOpen = true;
+        // The bar was collapsed until now; focus it once it is laid out.
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+        {
+            SearchBox.Focus();
+            SearchBox.SelectAll();
+        });
     }
 
     private void RestorePlacement(AppSettings settings)

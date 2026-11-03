@@ -5,16 +5,31 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:b="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:behaviors="clr-namespace:TinyHex.Behaviors"
+        xmlns:converters="clr-namespace:TinyHex.Converters"
+        xmlns:m="clr-namespace:TinyHex.Models"
         xmlns:vm="clr-namespace:TinyHex.ViewModels"
         mc:Ignorable="d"
         d:DataContext="{d:DesignInstance Type=vm:MainViewModel}"
         Title="{Binding WindowTitle, FallbackValue='TinyHex'}" Height="600" Width="1200">
 
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibility" />
+        <converters:EnumEqualsConverter x:Key="EnumEquals" />
+    </Window.Resources>
+
     <!-- Keyboard shortcuts -->
     <Window.InputBindings>
         <!-- Ctrl + 'O' for Open -->
         <KeyBinding Command="{Binding OpenFileCommand}" Key="O" Modifiers="Control" />
+        <KeyBinding Key="F3" Command="{Binding Search.FindNextCommand}" />
+        <KeyBinding Modifiers="Shift" Key="F3" Command="{Binding Search.FindPreviousCommand}" />
+        <KeyBinding Key="Escape" Command="{Binding Search.CloseCommand}" />
     </Window.InputBindings>
+
+    <!-- Ctrl+F; the code-behind opens the find bar and focuses its text box. -->
+    <Window.CommandBindings>
+        <CommandBinding Command="ApplicationCommands.Find" Executed="Find_Executed" />
+    </Window.CommandBindings>
 
     <DockPanel>
         <Menu DockPanel.Dock="Top" HorizontalAlignment="Stretch">
@@ -25,30 +40,78 @@
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
+            <MenuItem Header="_Search">
+                <MenuItem Header="_Find…" Command="ApplicationCommands.Find" InputGestureText="Ctrl+F" />
+                <MenuItem Header="Find _Next" Command="{Binding Search.FindNextCommand}" InputGestureText="F3" />
+                <MenuItem Header="Find _Previous" Command="{Binding Search.FindPreviousCommand}" InputGestureText="Shift+F3" />
+            </MenuItem>
         </Menu>
 
-        <ToolBar DockPanel.Dock="Top" Height="32">
-            <Button Command="{Binding OpenFileCommand}" ToolTip="Open File (Ctrl+O)"
-                    AutomationProperties.Name="Open File">
-                <Image Source="/Resources/OpenFile.png" />
-            </Button>
-            <Separator />
-            <TextBlock Text="Bytes per line:" VerticalAlignment="Center" Margin="4,0" />
-            <ComboBox Width="80"
-                      ItemsSource="{Binding BytesPerLineOptions}"
-                      SelectedItem="{Binding BytesPerLine}"
-                      AutomationProperties.Name="Bytes per Line" />
-            <Separator />
-            <TextBlock Text="Go to:" VerticalAlignment="Center" Margin="4,0" />
-            <TextBox Width="100" VerticalContentAlignment="Center"
-                     Text="{Binding GoToText, UpdateSourceTrigger=PropertyChanged}"
-                     ToolTip="File offset, decimal or hex with 0x prefix (commit with Enter)"
-                     AutomationProperties.Name="Go to Offset">
-                <TextBox.InputBindings>
-                    <KeyBinding Key="Enter" Command="{Binding GoToCommand}" />
-                </TextBox.InputBindings>
-            </TextBox>
-        </ToolBar>
+        <ToolBarTray DockPanel.Dock="Top" IsLocked="True">
+            <ToolBar Band="0" Height="32">
+                <Button Command="{Binding OpenFileCommand}" ToolTip="Open File (Ctrl+O)"
+                        AutomationProperties.Name="Open File">
+                    <Image Source="/Resources/OpenFile.png" />
+                </Button>
+                <Separator />
+                <TextBlock Text="Bytes per line:" VerticalAlignment="Center" Margin="4,0" />
+                <ComboBox Width="80"
+                          ItemsSource="{Binding BytesPerLineOptions}"
+                          SelectedItem="{Binding BytesPerLine}"
+                          AutomationProperties.Name="Bytes per Line" />
+                <Separator />
+                <TextBlock Text="Go to:" VerticalAlignment="Center" Margin="4,0" />
+                <TextBox Width="100" VerticalContentAlignment="Center"
+                         Text="{Binding GoToText, UpdateSourceTrigger=PropertyChanged}"
+                         ToolTip="File offset, decimal or hex with 0x prefix (commit with Enter)"
+                         AutomationProperties.Name="Go to Offset">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Enter" Command="{Binding GoToCommand}" />
+                    </TextBox.InputBindings>
+                </TextBox>
+            </ToolBar>
+
+            <!-- Find bar, below the main toolbar while searching. -->
+            <ToolBar Band="1"
+                     Visibility="{Binding Search.IsOpen, Converter={StaticResource BooleanToVisibility}}">
+                <TextBlock Text="Find" VerticalAlignment="Center" Margin="2,0,4,0" />
+                <TextBox x:Name="SearchBox" Width="220" VerticalContentAlignment="Center"
+                         Text="{Binding Search.Text, UpdateSourceTrigger=PropertyChanged}"
+                         AutomationProperties.Name="Find">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Enter" Command="{Binding Search.FindNextCommand}" />
+                        <KeyBinding Modifiers="Shift" Key="Enter" Command="{Binding Search.FindPreviousCommand}" />
+                    </TextBox.InputBindings>
+                    <TextBox.Style>
+                        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Static ToolBar.TextBoxStyleKey}}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Search.HasNoMatches}" Value="True">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBox.Style>
+                </TextBox>
+                <Button Content="✕" Command="{Binding Search.CloseCommand}" ToolTip="Close the search (Esc)" />
+                <Separator />
+                <RadioButton Content="Text" GroupName="SearchMode" ToolTip="Search for text"
+                             IsChecked="{Binding Search.Mode, Converter={StaticResource EnumEquals},
+                                         ConverterParameter={x:Static m:SearchMode.Text}}" />
+                <RadioButton Content="Hex" GroupName="SearchMode" ToolTip="Search for hex bytes, e.g. DE AD BE EF"
+                             IsChecked="{Binding Search.Mode, Converter={StaticResource EnumEquals},
+                                         ConverterParameter={x:Static m:SearchMode.Hex}}" />
+                <Separator />
+                <ToggleButton Content="Aa" IsChecked="{Binding Search.MatchCase}" IsEnabled="{Binding Search.IsTextMode}"
+                              ToolTip="Match case" />
+                <ToggleButton Content="UTF-16" IsChecked="{Binding Search.Utf16}" IsEnabled="{Binding Search.IsTextMode}"
+                              ToolTip="Search for the text encoded as UTF-16 (little endian)" />
+                <Separator />
+                <Button Content="▲ Prev" Command="{Binding Search.FindPreviousCommand}"
+                        ToolTip="Previous match (Shift+F3, Shift+Enter)" />
+                <Button Content="▼ Next" Command="{Binding Search.FindNextCommand}" ToolTip="Next match (F3, Enter)" />
+                <TextBlock Text="{Binding Search.Status}" VerticalAlignment="Center" Margin="6,0,4,0" />
+            </ToolBar>
+        </ToolBarTray>
 
         <ListView ItemsSource="{Binding Records}"
                   SelectedIndex="{Binding SelectedIndex}"
@@ -62,6 +125,13 @@
                 <behaviors:DropBehavior Command="{Binding DropCommand}" />
                 <behaviors:ScrollIntoViewBehavior Notifier="{Binding ScrollRequest}" />
             </b:Interaction.Behaviors>
+            <ListView.ItemTemplate>
+                <DataTemplate DataType="{x:Type m:HexRow}">
+                    <TextBlock behaviors:SearchHighlight.Row="{Binding}"
+                               behaviors:SearchHighlight.Highlights="{Binding DataContext.Search.Highlights,
+                                   RelativeSource={RelativeSource AncestorType=ListView}}" />
+                </DataTemplate>
+            </ListView.ItemTemplate>
         </ListView>
     </DockPanel>
 </Window>

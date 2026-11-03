@@ -12,13 +12,13 @@ public class MemoryMappedDataCollectionTests
         MemoryMappedFile.CreateFromFile(file.Path, FileMode.Open);
 
     [Test]
-    public void Count_IsFileSizeDividedByRecordSize_DroppingPartialRecord()
+    public void Count_IncludesPartialLastRecord()
     {
         using var file = TempFile.WithSequentialBytes(100);
         using var mmf = Map(file);
         using var records = new MemoryMappedDataCollection(mmf, 100, 16);
 
-        Assert.That(records.Count, Is.EqualTo(6));
+        Assert.That(records.Count, Is.EqualTo(7));
     }
 
     [Test]
@@ -28,8 +28,22 @@ public class MemoryMappedDataCollectionTests
         using var mmf = Map(file);
         using var records = new MemoryMappedDataCollection(mmf, 8, 4);
 
-        Assert.That(records[0], Is.EqualTo("00000000: 41 42 00 7F | AB.."));
-        Assert.That(records[1], Is.EqualTo("00000004: 20 7E 1F FF |  ~.."));
+        Assert.That(records[0].ToString(), Is.EqualTo("00000000: 41 42 00 7F | AB.."));
+        Assert.That(records[1].ToString(), Is.EqualTo("00000004: 20 7E 1F FF |  ~.."));
+    }
+
+    [Test]
+    public void Indexer_PartialLastRecord_HasRemainingBytesAndAlignedColumns()
+    {
+        using var file = new TempFile([0x41, 0x42, 0x43, 0x44, 0x45, 0x46]);
+        using var mmf = Map(file);
+        using var records = new MemoryMappedDataCollection(mmf, 6, 4);
+
+        var last = records[1];
+
+        Assert.That(last.Offset, Is.EqualTo(4));
+        Assert.That(last.Bytes, Is.EqualTo(new byte[] { 0x45, 0x46 }));
+        Assert.That(last.ToString(), Is.EqualTo("00000004: 45 46       | EF"));
     }
 
     [Test]
@@ -48,7 +62,7 @@ public class MemoryMappedDataCollectionTests
         {
             long offset = (long)i * recordSize;
             var expectedHex = string.Join(" ", Enumerable.Range(0, recordSize).Select(b => ((byte)(offset + b)).ToString("X2")));
-            Assert.That(records[i], Does.StartWith($"{offset:X8}: {expectedHex} | "));
+            Assert.That(records[i].ToString(), Does.StartWith($"{offset:X8}: {expectedHex} | "));
         }
     }
 
@@ -73,9 +87,10 @@ public class MemoryMappedDataCollectionTests
 
         Assert.That(records.IsReadOnly, Is.True);
         Assert.That(list.IsFixedSize, Is.True);
-        Assert.Throws<NotSupportedException>(() => records.Add("x"));
+        var row = records[0];
+        Assert.Throws<NotSupportedException>(() => records.Add(row));
         Assert.Throws<NotSupportedException>(() => records.RemoveAt(0));
-        Assert.Throws<NotSupportedException>(() => records[0] = "x");
+        Assert.Throws<NotSupportedException>(() => records[0] = row);
         Assert.Throws<NotSupportedException>(() => list.Clear());
     }
 }
