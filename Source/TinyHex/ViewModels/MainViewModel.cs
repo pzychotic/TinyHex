@@ -52,6 +52,9 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
         // keep the selection on the same file offset in the new layout
         long selectedOffset = SelectedIndex >= 0 ? (long)SelectedIndex * oldValue : -1;
         LoadRecords();
+        // the current search hit, if any, is what the selection is on
+        if (CurrentHitOffset() is long hitOffset)
+            selectedOffset = hitOffset;
         if (selectedOffset >= 0 && Records != null && selectedOffset / newValue < Records.Count)
             SelectAndScrollTo((int)(selectedOffset / newValue));
     }
@@ -91,10 +94,13 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
         _mmf?.Dispose();
         _mmf = mmf;
         _fileSize = fileSize;
+        _filePath = filePath;
         LoadRecords();
         // the list keeps its scroll position when the records are replaced, so start a new file at the top
         ScrollRequest.Request(0);
         Filename = Path.GetFileName(filePath);
+        // search the new file with the open find bar's query
+        RestartSearch();
     }
 
     /// <summary>
@@ -149,6 +155,7 @@ public partial class MainViewModel(IDialogService dialogService) : ObservableObj
 
     public void Dispose()
     {
+        CancelSearch();
         Records?.Dispose();
         _mmf?.Dispose();
         GC.SuppressFinalize(this);

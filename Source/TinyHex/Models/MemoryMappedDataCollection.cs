@@ -1,10 +1,9 @@
 using System.Collections;
 using System.IO.MemoryMappedFiles;
-using System.Text;
 
 namespace TinyHex.Models;
 
-public class MemoryMappedDataCollection : IList<string>, IList, IDisposable
+public class MemoryMappedDataCollection : IList<HexRow>, IList, IDisposable
 {
     private readonly MemoryMappedFile _mmf;
     private readonly long _fileSize;
@@ -26,29 +25,22 @@ public class MemoryMappedDataCollection : IList<string>, IList, IDisposable
         _recordSize = recordSize;
         _chunkSize  = chunkSize;
         _overlap    = overlap;
-        _count      = fileSize / recordSize;
+        // the last line may be shorter than a record
+        _count      = (fileSize + recordSize - 1) / recordSize;
     }
 
-    public string this[int index]
+    public HexRow this[int index]
     {
         get
         {
             if (index < 0 || index >= _count)
                 throw new ArgumentOutOfRangeException();
 
-            byte[] buffer = new byte[_recordSize];
             long fileOffset = (long)index * _recordSize;
+            byte[] buffer = new byte[Math.Min(_recordSize, _fileSize - fileOffset)];
             var chunk = GetOrLoadChunk(fileOffset);
             chunk.Accessor.ReadArray(fileOffset - chunk.StartOffset, buffer, 0, buffer.Length);
-
-            // format line: offset: hex dump | ascii
-            var hex = BitConverter.ToString(buffer).Replace("-", " ");
-            var ascii = new StringBuilder();
-            foreach (byte b in buffer)
-                ascii.Append(b >= 32 && b <= 126 ? (char)b : '.');
-
-            int pad = _recordSize * 3;
-            return $"{fileOffset:X8}:{hex.PadLeft(pad)} | {ascii}";
+            return new HexRow(fileOffset, buffer, _recordSize);
         }
         set => throw new NotSupportedException();
     }
@@ -109,16 +101,16 @@ public class MemoryMappedDataCollection : IList<string>, IList, IDisposable
         public void Dispose() => Accessor?.Dispose();
     }
 
-    public void Add(string item) => throw new NotSupportedException();
+    public void Add(HexRow item) => throw new NotSupportedException();
     public void Clear() => throw new NotSupportedException();
-    public bool Contains(string item) => false;
-    public void CopyTo(string[] array, int arrayIndex) => throw new NotSupportedException();
-    public int IndexOf(string item) => throw new NotSupportedException();
-    public void Insert(int index, string item) => throw new NotSupportedException();
-    public bool Remove(string item) => throw new NotSupportedException();
+    public bool Contains(HexRow item) => false;
+    public void CopyTo(HexRow[] array, int arrayIndex) => throw new NotSupportedException();
+    public int IndexOf(HexRow item) => throw new NotSupportedException();
+    public void Insert(int index, HexRow item) => throw new NotSupportedException();
+    public bool Remove(HexRow item) => throw new NotSupportedException();
     public void RemoveAt(int index) => throw new NotSupportedException();
 
-    public IEnumerator<string> GetEnumerator() => Enumerable.Empty<string>().GetEnumerator();
+    public IEnumerator<HexRow> GetEnumerator() => Enumerable.Empty<HexRow>().GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     object? IList.this[int index]
