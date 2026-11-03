@@ -21,9 +21,9 @@
     <Window.InputBindings>
         <!-- Ctrl + 'O' for Open -->
         <KeyBinding Command="{Binding OpenFileCommand}" Key="O" Modifiers="Control" />
-        <KeyBinding Key="F3" Command="{Binding FindNextCommand}" />
-        <KeyBinding Modifiers="Shift" Key="F3" Command="{Binding FindPreviousCommand}" />
-        <KeyBinding Key="Escape" Command="{Binding CloseSearchCommand}" />
+        <KeyBinding Key="F3" Command="{Binding Search.FindNextCommand}" />
+        <KeyBinding Modifiers="Shift" Key="F3" Command="{Binding Search.FindPreviousCommand}" />
+        <KeyBinding Key="Escape" Command="{Binding Search.CloseCommand}" />
     </Window.InputBindings>
 
     <!-- Ctrl+F; the code-behind opens the find bar and focuses its text box. -->
@@ -42,8 +42,8 @@
             </MenuItem>
             <MenuItem Header="_Search">
                 <MenuItem Header="_Find…" Command="ApplicationCommands.Find" InputGestureText="Ctrl+F" />
-                <MenuItem Header="Find _Next" Command="{Binding FindNextCommand}" InputGestureText="F3" />
-                <MenuItem Header="Find _Previous" Command="{Binding FindPreviousCommand}" InputGestureText="Shift+F3" />
+                <MenuItem Header="Find _Next" Command="{Binding Search.FindNextCommand}" InputGestureText="F3" />
+                <MenuItem Header="Find _Previous" Command="{Binding Search.FindPreviousCommand}" InputGestureText="Shift+F3" />
             </MenuItem>
         </Menu>
 
@@ -73,43 +73,43 @@
 
             <!-- Find bar, below the main toolbar while searching. -->
             <ToolBar Band="1"
-                     Visibility="{Binding IsSearchOpen, Converter={StaticResource BooleanToVisibility}}">
+                     Visibility="{Binding Search.IsOpen, Converter={StaticResource BooleanToVisibility}}">
                 <TextBlock Text="Find" VerticalAlignment="Center" Margin="2,0,4,0" />
                 <TextBox x:Name="SearchBox" Width="220" VerticalContentAlignment="Center"
-                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         Text="{Binding Search.Text, UpdateSourceTrigger=PropertyChanged}"
                          AutomationProperties.Name="Find">
                     <TextBox.InputBindings>
-                        <KeyBinding Key="Enter" Command="{Binding FindNextCommand}" />
-                        <KeyBinding Modifiers="Shift" Key="Enter" Command="{Binding FindPreviousCommand}" />
+                        <KeyBinding Key="Enter" Command="{Binding Search.FindNextCommand}" />
+                        <KeyBinding Modifiers="Shift" Key="Enter" Command="{Binding Search.FindPreviousCommand}" />
                     </TextBox.InputBindings>
                     <TextBox.Style>
                         <Style TargetType="TextBox" BasedOn="{StaticResource {x:Static ToolBar.TextBoxStyleKey}}">
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding HasNoMatches}" Value="True">
+                                <DataTrigger Binding="{Binding Search.HasNoMatches}" Value="True">
                                     <Setter Property="BorderBrush" Value="{DynamicResource ErrorBrush}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </TextBox.Style>
                 </TextBox>
-                <Button Content="✕" Command="{Binding CloseSearchCommand}" ToolTip="Close the search (Esc)" />
+                <Button Content="✕" Command="{Binding Search.CloseCommand}" ToolTip="Close the search (Esc)" />
                 <Separator />
                 <RadioButton Content="Text" GroupName="SearchMode" ToolTip="Search for text"
-                             IsChecked="{Binding SearchMode, Converter={StaticResource EnumEquals},
+                             IsChecked="{Binding Search.Mode, Converter={StaticResource EnumEquals},
                                          ConverterParameter={x:Static m:SearchMode.Text}}" />
                 <RadioButton Content="Hex" GroupName="SearchMode" ToolTip="Search for hex bytes, e.g. DE AD BE EF"
-                             IsChecked="{Binding SearchMode, Converter={StaticResource EnumEquals},
+                             IsChecked="{Binding Search.Mode, Converter={StaticResource EnumEquals},
                                          ConverterParameter={x:Static m:SearchMode.Hex}}" />
                 <Separator />
-                <ToggleButton Content="Aa" IsChecked="{Binding SearchMatchCase}" IsEnabled="{Binding IsTextSearch}"
+                <ToggleButton Content="Aa" IsChecked="{Binding Search.MatchCase}" IsEnabled="{Binding Search.IsTextMode}"
                               ToolTip="Match case" />
-                <ToggleButton Content="UTF-16" IsChecked="{Binding SearchUtf16}" IsEnabled="{Binding IsTextSearch}"
+                <ToggleButton Content="UTF-16" IsChecked="{Binding Search.Utf16}" IsEnabled="{Binding Search.IsTextMode}"
                               ToolTip="Search for the text encoded as UTF-16 (little endian)" />
                 <Separator />
-                <Button Content="▲ Prev" Command="{Binding FindPreviousCommand}"
+                <Button Content="▲ Prev" Command="{Binding Search.FindPreviousCommand}"
                         ToolTip="Previous match (Shift+F3, Shift+Enter)" />
-                <Button Content="▼ Next" Command="{Binding FindNextCommand}" ToolTip="Next match (F3, Enter)" />
-                <TextBlock Text="{Binding SearchStatus}" VerticalAlignment="Center" Margin="6,0,4,0" />
+                <Button Content="▼ Next" Command="{Binding Search.FindNextCommand}" ToolTip="Next match (F3, Enter)" />
+                <TextBlock Text="{Binding Search.Status}" VerticalAlignment="Center" Margin="6,0,4,0" />
             </ToolBar>
         </ToolBarTray>
 
@@ -128,7 +128,7 @@
             <ListView.ItemTemplate>
                 <DataTemplate DataType="{x:Type m:HexRow}">
                     <TextBlock behaviors:SearchHighlight.Row="{Binding}"
-                               behaviors:SearchHighlight.Highlights="{Binding DataContext.SearchHighlights,
+                               behaviors:SearchHighlight.Highlights="{Binding DataContext.Search.Highlights,
                                    RelativeSource={RelativeSource AncestorType=ListView}}" />
                 </DataTemplate>
             </ListView.ItemTemplate>

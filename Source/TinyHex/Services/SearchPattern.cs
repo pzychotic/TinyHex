@@ -1,4 +1,5 @@
-using System.Globalization;
+using System.Buffers;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using TinyHex.Models;
 
@@ -31,7 +32,7 @@ public sealed class SearchPattern
     /// <param name="matchCase">Text only: match ASCII letters in their exact case.</param>
     /// <param name="utf16">Text only: encode the text as UTF-16LE instead of UTF-8.</param>
     public static bool TryCreate(string text, SearchMode mode, bool matchCase, bool utf16,
-        out SearchPattern? pattern, out string? error)
+        [NotNullWhen(true)] out SearchPattern? pattern, out string? error)
     {
         pattern = null;
         error = null;
@@ -73,12 +74,8 @@ public sealed class SearchPattern
         }
 
         var result = new byte[digits.Length / 2];
-        for (int i = 0; i < result.Length; i++)
-        {
-            if (!byte.TryParse(digits.ToString(2 * i, 2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture,
-                    out result[i]))
-                return false;
-        }
+        if (Convert.FromHexString(digits.ToString(), result, out _, out _) != OperationStatus.Done)
+            return false;
         bytes = result;
         return true;
     }

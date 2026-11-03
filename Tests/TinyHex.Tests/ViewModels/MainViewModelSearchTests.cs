@@ -24,16 +24,17 @@ public class MainViewModelSearchTests
         "ab"u8.CopyTo(data.AsSpan(150));
         _file = new TempFile(data);
         _dialogService = new FakeDialogService();
-        _vm = new MainViewModel(_dialogService) { SearchDelay = TimeSpan.Zero };
+        _vm = new MainViewModel(_dialogService);
+        _vm.Search.Delay = TimeSpan.Zero;
         Open(_file);
-        _vm.IsSearchOpen = true;
+        _vm.Search.IsOpen = true;
     }
 
     [TearDown]
     public async Task TearDown()
     {
         _vm.Dispose();
-        await _vm.SearchTask;   // the search has the file open until it has stopped
+        await _vm.Search.SearchTask;   // the search has the file open until it has stopped
         _file.Dispose();
         foreach (var file in _otherFiles)
             file.Dispose();
@@ -58,12 +59,12 @@ public class MainViewModelSearchTests
 
     private async Task Search(string text)
     {
-        _vm.SearchText = text;
-        await _vm.SearchTask;
+        _vm.Search.Text = text;
+        await _vm.Search.SearchTask;
     }
 
     private long CurrentHitOffset() =>
-        _vm.SearchHighlights is { Current: int current } h
+        _vm.Search.Highlights is { Current: int current } h
             ? Enumerable.Range(0, 256).First(o => h.For(o, 1).Any(r => r.IsCurrent))
             : -1;
 
@@ -75,10 +76,10 @@ public class MainViewModelSearchTests
 
         await Search("AB");
 
-        Assert.That(_vm.SearchStatus, Is.EqualTo("1 of 5"));
-        Assert.That(_vm.HasNoMatches, Is.False);
-        Assert.That(_vm.SearchHighlights!.Count, Is.EqualTo(5));
-        Assert.That(_vm.SearchHighlights.Current, Is.EqualTo(0));
+        Assert.That(_vm.Search.Status, Is.EqualTo("1 of 5"));
+        Assert.That(_vm.Search.HasNoMatches, Is.False);
+        Assert.That(_vm.Search.Highlights!.Count, Is.EqualTo(5));
+        Assert.That(_vm.Search.Highlights.Current, Is.EqualTo(0));
         Assert.That(_vm.SelectedIndex, Is.EqualTo(0));
         Assert.That(scrolledTo, Is.EqualTo(0));
     }
@@ -90,7 +91,7 @@ public class MainViewModelSearchTests
 
         await Search("AB");
 
-        Assert.That(_vm.SearchStatus, Is.EqualTo("3 of 5"));
+        Assert.That(_vm.Search.Status, Is.EqualTo("3 of 5"));
         Assert.That(CurrentHitOffset(), Is.EqualTo(100));
         Assert.That(_vm.SelectedIndex, Is.EqualTo(3));
     }
@@ -102,7 +103,7 @@ public class MainViewModelSearchTests
 
         await Search("AB");
 
-        Assert.That(_vm.SearchStatus, Is.EqualTo("1 of 5"));
+        Assert.That(_vm.Search.Status, Is.EqualTo("1 of 5"));
         Assert.That(_vm.SelectedIndex, Is.EqualTo(0));
     }
 
@@ -111,42 +112,42 @@ public class MainViewModelSearchTests
     {
         await Search("zz");
 
-        Assert.That(_vm.SearchStatus, Is.EqualTo("No matches"));
-        Assert.That(_vm.HasNoMatches, Is.True);
-        Assert.That(_vm.SearchHighlights, Is.Null);
+        Assert.That(_vm.Search.Status, Is.EqualTo("No matches"));
+        Assert.That(_vm.Search.HasNoMatches, Is.True);
+        Assert.That(_vm.Search.Highlights, Is.Null);
     }
 
     [Test]
     public async Task SearchMatchCase_NarrowsTheHits()
     {
-        _vm.SearchMatchCase = true;
+        _vm.Search.MatchCase = true;
 
         await Search("AB");
 
-        Assert.That(_vm.SearchStatus, Is.EqualTo("1 of 4"));
+        Assert.That(_vm.Search.Status, Is.EqualTo("1 of 4"));
     }
 
     [Test]
     public async Task HexSearch_FindsExactBytes()
     {
-        _vm.SearchMode = SearchMode.Hex;
+        _vm.Search.Mode = SearchMode.Hex;
 
         await Search("61 62");
 
-        Assert.That(_vm.SearchStatus, Is.EqualTo("1 of 1"));
+        Assert.That(_vm.Search.Status, Is.EqualTo("1 of 1"));
         Assert.That(CurrentHitOffset(), Is.EqualTo(150));
-        Assert.That(_vm.IsTextSearch, Is.False);
+        Assert.That(_vm.Search.IsTextMode, Is.False);
     }
 
     [Test]
     public async Task HexSearch_InvalidHex_SaysSo()
     {
-        _vm.SearchMode = SearchMode.Hex;
+        _vm.Search.Mode = SearchMode.Hex;
 
         await Search("ABC");
 
-        Assert.That(_vm.SearchStatus, Is.EqualTo("Invalid hex"));
-        Assert.That(_vm.HasNoMatches, Is.True);
+        Assert.That(_vm.Search.Status, Is.EqualTo("Invalid hex"));
+        Assert.That(_vm.Search.HasNoMatches, Is.True);
     }
 
     [Test]
@@ -155,11 +156,11 @@ public class MainViewModelSearchTests
         var data = new byte[64];
         Encoding.Unicode.GetBytes("Hi").CopyTo(data, 40);
         Open(OtherFile(data));
-        _vm.SearchUtf16 = true;
+        _vm.Search.Utf16 = true;
 
         await Search("hi");
 
-        Assert.That(_vm.SearchStatus, Is.EqualTo("1 of 1"));
+        Assert.That(_vm.Search.Status, Is.EqualTo("1 of 1"));
         Assert.That(CurrentHitOffset(), Is.EqualTo(40));
     }
 
@@ -168,15 +169,15 @@ public class MainViewModelSearchTests
     {
         await Search("AB");
 
-        _vm.FindPreviousCommand.Execute(null);
-        Assert.That(_vm.SearchStatus, Is.EqualTo("5 of 5"));
+        _vm.Search.FindPreviousCommand.Execute(null);
+        Assert.That(_vm.Search.Status, Is.EqualTo("5 of 5"));
         Assert.That(_vm.SelectedIndex, Is.EqualTo(200 / 32));
 
-        _vm.FindNextCommand.Execute(null);
-        Assert.That(_vm.SearchStatus, Is.EqualTo("1 of 5"));
+        _vm.Search.FindNextCommand.Execute(null);
+        Assert.That(_vm.Search.Status, Is.EqualTo("1 of 5"));
 
-        _vm.FindNextCommand.Execute(null);
-        Assert.That(_vm.SearchStatus, Is.EqualTo("2 of 5"));
+        _vm.Search.FindNextCommand.Execute(null);
+        Assert.That(_vm.Search.Status, Is.EqualTo("2 of 5"));
         Assert.That(CurrentHitOffset(), Is.EqualTo(50));
     }
 
@@ -185,37 +186,37 @@ public class MainViewModelSearchTests
     {
         await Search("AB");
 
-        _vm.CloseSearchCommand.Execute(null);
+        _vm.Search.CloseCommand.Execute(null);
 
-        Assert.That(_vm.IsSearchOpen, Is.False);
-        Assert.That(_vm.SearchText, Is.EqualTo("AB"));
-        Assert.That(_vm.SearchHighlights, Is.Null);
-        Assert.That(_vm.SearchStatus, Is.Empty);
-        Assert.That(_vm.CloseSearchCommand.CanExecute(null), Is.False);
+        Assert.That(_vm.Search.IsOpen, Is.False);
+        Assert.That(_vm.Search.Text, Is.EqualTo("AB"));
+        Assert.That(_vm.Search.Highlights, Is.Null);
+        Assert.That(_vm.Search.Status, Is.Empty);
+        Assert.That(_vm.Search.CloseCommand.CanExecute(null), Is.False);
     }
 
     [Test]
     public async Task FindNext_WhileClosed_ReopensTheSearch()
     {
-        _vm.IsSearchOpen = false;
-        _vm.SearchText = "AB";
+        _vm.Search.IsOpen = false;
+        _vm.Search.Text = "AB";
 
-        _vm.FindNextCommand.Execute(null);
-        await _vm.SearchTask;
+        _vm.Search.FindNextCommand.Execute(null);
+        await _vm.Search.SearchTask;
 
-        Assert.That(_vm.IsSearchOpen, Is.True);
-        Assert.That(_vm.SearchStatus, Is.EqualTo("1 of 5"));
+        Assert.That(_vm.Search.IsOpen, Is.True);
+        Assert.That(_vm.Search.Status, Is.EqualTo("1 of 5"));
     }
 
     [Test]
     public void FindNext_WithoutText_IsDisabled()
     {
-        Assert.That(_vm.FindNextCommand.CanExecute(null), Is.False);
-        Assert.That(_vm.FindPreviousCommand.CanExecute(null), Is.False);
+        Assert.That(_vm.Search.FindNextCommand.CanExecute(null), Is.False);
+        Assert.That(_vm.Search.FindPreviousCommand.CanExecute(null), Is.False);
 
-        _vm.SearchText = "x";
+        _vm.Search.Text = "x";
 
-        Assert.That(_vm.FindNextCommand.CanExecute(null), Is.True);
+        Assert.That(_vm.Search.FindNextCommand.CanExecute(null), Is.True);
     }
 
     [Test]
@@ -226,9 +227,9 @@ public class MainViewModelSearchTests
         "AB"u8.CopyTo(data.AsSpan(33));
 
         Open(OtherFile(data));
-        await _vm.SearchTask;
+        await _vm.Search.SearchTask;
 
-        Assert.That(_vm.SearchStatus, Is.EqualTo("1 of 1"));
+        Assert.That(_vm.Search.Status, Is.EqualTo("1 of 1"));
         Assert.That(CurrentHitOffset(), Is.EqualTo(33));
     }
 
@@ -236,12 +237,12 @@ public class MainViewModelSearchTests
     public async Task ChangingBytesPerLine_KeepsTheHits()
     {
         await Search("AB");
-        _vm.FindNextCommand.Execute(null); // offset 50
-        var highlights = _vm.SearchHighlights;
+        _vm.Search.FindNextCommand.Execute(null); // offset 50
+        var highlights = _vm.Search.Highlights;
 
         _vm.BytesPerLine = 8;
 
-        Assert.That(_vm.SearchHighlights, Is.SameAs(highlights));
+        Assert.That(_vm.Search.Highlights, Is.SameAs(highlights));
         Assert.That(_vm.SelectedIndex, Is.EqualTo(50 / 8));
     }
 }

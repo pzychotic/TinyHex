@@ -50,7 +50,7 @@ public partial class MainWindow : Window
 
     private void Find_Executed(object sender, ExecutedRoutedEventArgs e)
     {
-        _viewModel.IsSearchOpen = true;
+        _viewModel.Search.IsOpen = true;
         // The bar was collapsed until now; focus it once it is laid out.
         Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
         {

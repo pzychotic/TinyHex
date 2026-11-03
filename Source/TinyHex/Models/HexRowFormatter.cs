@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text;
 
 namespace TinyHex.Models;
@@ -27,12 +28,16 @@ public static class HexRowFormatter
     }
 
     /// <summary>The position of the two hex digits of byte <paramref name="index"/> in the formatted line.</summary>
-    public static int HexColumn(HexRow row, int index) => OffsetText(row.Offset).Length + 2 + 3 * index;
+    public static int HexColumn(HexRow row, int index) => OffsetWidth(row.Offset) + 2 + 3 * index;
 
     /// <summary>The position of the character of byte <paramref name="index"/> in the formatted line.</summary>
     public static int AsciiColumn(HexRow row, int index) =>
-        OffsetText(row.Offset).Length + 3 * row.BytesPerLine + 4 + index;
+        OffsetWidth(row.Offset) + 3 * row.BytesPerLine + 4 + index;
 
     // at least 8 digits; offsets from 4 GB on take more
     private static string OffsetText(long offset) => offset.ToString("X8");
+
+    /// <summary>The length of <see cref="OffsetText"/>, without formatting it.</summary>
+    private static int OffsetWidth(long offset) =>
+        Math.Max(8, (64 - BitOperations.LeadingZeroCount((ulong)offset) + 3) / 4);
 }

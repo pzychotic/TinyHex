@@ -6,8 +6,9 @@ public readonly record struct ByteHighlight(int Start, int Length, bool IsCurren
 /// <summary>
 /// The search hits to highlight: the first <paramref name="count"/> offsets of <paramref name="hits"/> (ascending,
 /// not overlapping), each <paramref name="patternLength"/> bytes long, with hit <paramref name="current"/> as the
-/// current one. Immutable as far as its readers see: the list may only grow past <paramref name="count"/>, so a new
-/// instance is published whenever hits are added or the current hit changes, which redraws the rows.
+/// current one. Immutable as far as its readers see, as long as <paramref name="hits"/> only grows past
+/// <paramref name="count"/> (as a <see cref="HitList"/> does); a new instance is published whenever hits are added or
+/// the current hit changes, which redraws the rows.
 /// </summary>
 public sealed class SearchHighlights(IReadOnlyList<long> hits, int count, int patternLength, int? current)
 {
