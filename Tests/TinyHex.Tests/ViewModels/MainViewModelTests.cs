@@ -43,6 +43,14 @@ public class MainViewModelTests
     }
 
     [Test]
+    public void ExitCommand_RequestsShutdown()
+    {
+        _vm.ExitCommand.Execute(null);
+
+        Assert.That(_dialogService.ShutdownRequested, Is.True);
+    }
+
+    [Test]
     public void OpenFile_Cancelled_LeavesRecordsEmpty()
     {
         _dialogService.OpenFileResult = null;

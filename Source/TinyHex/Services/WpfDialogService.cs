@@ -14,4 +14,9 @@ public sealed class WpfDialogService(Window owner) : IDialogService
     {
         MessageBox.Show(owner, message, title, MessageBoxButton.OK, MessageBoxImage.Error);
     }
+
+    public void RequestShutdown()
+    {
+        Application.Current.Shutdown();
+    }
 }

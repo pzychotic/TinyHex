@@ -4,4 +4,5 @@ public interface IDialogService
 {
     string? ShowOpenFileDialog(string title, string filter);
     void ShowError(string title, string message);
+    void RequestShutdown();
 }

@@ -80,6 +80,9 @@ public partial class MainViewModel : ObservableObject, IDisposable
     }
 
     [RelayCommand]
+    private void Exit() => _dialogService.RequestShutdown();
+
+    [RelayCommand]
     private void Drop(string[]? files)
     {
         // only support one file right now
