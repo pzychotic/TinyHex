@@ -11,4 +11,8 @@ public sealed class FakeDialogService : IDialogService
     public string? ShowOpenFileDialog(string title, string filter) => OpenFileResult;
 
     public void ShowError(string title, string message) => Errors.Add(message);
+
+    public bool ShutdownRequested { get; private set; }
+
+    public void RequestShutdown() => ShutdownRequested = true;
 }
