@@ -90,6 +90,9 @@ public sealed partial class SearchViewModel : ObservableObject, IDisposable
     /// <summary>Match case and UTF-16 only apply to a text query.</summary>
     public bool IsTextMode => Mode == SearchMode.Text;
 
+    /// <summary>Notifier that the view subscribes to in order to focus the find box.</summary>
+    public FocusRequestNotifier FocusRequest { get; } = new();
+
     /// <summary>The file offset of the current hit, if any.</summary>
     public long? CurrentHitOffset => _currentHit is int current ? _hits[current] : null;
 
@@ -108,6 +111,14 @@ public sealed partial class SearchViewModel : ObservableObject, IDisposable
     partial void OnModeChanged(SearchMode value) => Restart();
     partial void OnMatchCaseChanged(bool value) => Restart();
     partial void OnUtf16Changed(bool value) => Restart();
+
+    /// <summary>Opens the find bar (if closed) and focuses the find box, also when it is already open.</summary>
+    [RelayCommand]
+    private void Open()
+    {
+        IsOpen = true;
+        FocusRequest.Request();
+    }
 
     [RelayCommand(CanExecute = nameof(IsOpen))]
     private void Close() => IsOpen = false;
